@@ -16,9 +16,13 @@
       }
       canvas {
         display: block;
+        width: 100%;
+        height: auto;
+        max-width: 560px;
+        max-height: 320px;
       }
       button {
-        margin-top: 20px;
+        margin: 20px;
         padding: 10px 20px;
         font-size: 24px;
         cursor: pointer;
@@ -30,6 +34,18 @@
       button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+      }
+
+      @media (max-width: 600px) {
+        body {
+          flex-direction: column;
+          justify-content: center;
+        }
+        button {
+          font-size: 18px;
+          padding: 8px 16px;
+          margin: 10px 20px; /* 画面端からの隙間を設ける */
+        }
       }
     </style>
   </head>
