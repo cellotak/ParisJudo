@@ -60,10 +60,10 @@
       let currentPosition = 0;
       let animationId;
       let startTime;
-      const spinDuration = 6000; // 6秒間のスピン
+      const spinDuration = 7000; // 6秒間のスピン
 
       function easeOutQuint(t) {
-        return 1 - Math.pow(1 - t, 6);
+        return 1 - Math.pow(1 - t, 2);
       }
 
       function drawRoulette(opacity = 1, showWeights = true, scale = 1) {
