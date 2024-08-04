@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ウェイトクラス ルーレット（確実に+90kg停止版）</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: black;
+      }
+      canvas {
+        display: block;
+      }
+      button {
+        margin-top: 20px;
+        padding: 10px 20px;
+        font-size: 24px;
+        cursor: pointer;
+        background-color: #333;
+        color: white;
+        border: none;
+        border-radius: 5px;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <canvas id="rouletteCanvas" width="560" height="320"></canvas>
+      <button onclick="startSequence()">Start</button>
+    </div>
+
+    <script>
+      const canvas = document.getElementById("rouletteCanvas");
+      const ctx = canvas.getContext("2d");
+      const weightClasses = [
+        "-57kg",
+        "-73kg",
+        "-70kg",
+        "+90kg",
+        "+70kg",
+        "-90kg",
+      ];
+      const itemHeight = 86.66;
+      const totalHeight = weightClasses.length * itemHeight;
+      const rouletteWidth = 520;
+      const rouletteHeight = 260;
+      const rouletteX = (canvas.width - rouletteWidth) / 2;
+      const rouletteY = (canvas.height - rouletteHeight) / 2;
+      let spinning = false;
+      let currentPosition = 0;
+      let animationId;
+      let startTime;
+      const spinDuration = 6000; // 6秒間のスピン
+
+      function easeOutQuint(t) {
+        return 1 - Math.pow(1 - t, 6);
+      }
+
+      function drawRoulette(opacity = 1, showWeights = true, scale = 1) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.globalAlpha = opacity;
+
+        ctx.fillStyle = "#191970";
+        ctx.fillRect(rouletteX, rouletteY, rouletteWidth, rouletteHeight);
+
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(rouletteX, rouletteY, rouletteWidth, rouletteHeight);
+
+        if (showWeights) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(rouletteX, rouletteY, rouletteWidth, rouletteHeight);
+          ctx.clip();
+
+          for (let i = -2; i <= 2; i++) {
+            const index = Math.floor(
+              (currentPosition / itemHeight - i + weightClasses.length * 10) %
+                weightClasses.length
+            );
+            const y =
+              canvas.height / 2 +
+              i * itemHeight +
+              (currentPosition % itemHeight);
+
+            ctx.font = `bold ${
+              48 * (index === weightClasses.indexOf("+90kg") ? scale : 1)
+            }px Arial`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            if (
+              weightClasses[index].includes("57") ||
+              weightClasses[index].includes("70")
+            ) {
+              ctx.fillStyle = "#FFC0CB";
+            } else {
+              ctx.fillStyle = "#87CEFA";
+            }
+
+            ctx.fillText(weightClasses[index], canvas.width / 2, y);
+          }
+
+          ctx.restore();
+        }
+
+        ctx.font = "bold 18px Arial";
+        ctx.fillStyle = "white";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        const omegaX = rouletteX + rouletteWidth - 5;
+        const omegaY = rouletteY + rouletteHeight + 20;
+        ctx.fillText("ΩOMEGA", omegaX, omegaY);
+
+        ctx.globalAlpha = 1;
+      }
+
+      function drawIntroText(opacity) {
+        drawRoulette(1, false);
+
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = "white";
+        ctx.font = "bold 36px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillText("GOLDEN SCORE", canvas.width / 2, canvas.height / 2 - 25);
+        ctx.fillText(
+          "DECISION CONTEST",
+          canvas.width / 2,
+          canvas.height / 2 + 25
+        );
+
+        ctx.globalAlpha = 1;
+      }
+
+      async function fadeIn(drawFunc, duration) {
+        const startTime = performance.now();
+        return new Promise((resolve) => {
+          function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            drawFunc(progress);
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+          }
+          requestAnimationFrame(animate);
+        });
+      }
+
+      async function fadeOut(drawFunc, duration) {
+        const startTime = performance.now();
+        return new Promise((resolve) => {
+          function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            drawFunc(1 - progress);
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+          }
+          requestAnimationFrame(animate);
+        });
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function startSequence() {
+        document.querySelector("button").disabled = true;
+
+        await fadeIn(drawIntroText, 1000);
+        await sleep(2000);
+        await fadeOut(drawIntroText, 1000);
+
+        currentPosition = weightClasses.indexOf("-57kg") * itemHeight;
+        await fadeIn((opacity) => drawRoulette(opacity, true), 1000);
+        await sleep(1000);
+
+        startSpin();
+      }
+
+      function startSpin() {
+        if (spinning) return;
+        spinning = true;
+        startTime = performance.now();
+
+        function spin(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / spinDuration, 1);
+          const easedProgress = easeOutQuint(progress);
+
+          // +90kgが6回転して中央に来るように位置を計算
+          const totalRotations =
+            6 * totalHeight + weightClasses.indexOf("+90kg") * itemHeight;
+          currentPosition = totalRotations * easedProgress;
+
+          drawRoulette(1, true);
+
+          if (progress < 1) {
+            animationId = requestAnimationFrame(spin);
+          } else {
+            stopSpin();
+          }
+        }
+
+        animationId = requestAnimationFrame(spin);
+      }
+
+      async function stopSpin() {
+        spinning = false;
+        cancelAnimationFrame(animationId);
+        document.querySelector("button").disabled = false;
+
+        // +90kgが確実に中央に来るように調整
+        currentPosition = weightClasses.indexOf("+90kg") * itemHeight;
+        drawRoulette(1, true);
+
+        // +90kgの文字を3倍に拡大するアニメーションを実行
+        await scaleText(weightClasses.indexOf("+90kg"));
+      }
+
+      async function scaleText(index) {
+        const startTime = performance.now();
+        const duration = 250; // アニメーションの持続時間を0.5秒に設定
+
+        return new Promise((resolve) => {
+          function animate(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const scale = 1 + 1.5 * progress; // スケールを1から3に変化させる
+
+            drawRoulette(1, true, scale);
+
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              resolve();
+            }
+          }
+          requestAnimationFrame(animate);
+        });
+      }
+
+      drawRoulette(1, false);
+    </script>
+  </body>
+</html>
